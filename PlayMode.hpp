@@ -28,21 +28,28 @@ struct PlayMode : Mode {
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
-	//hexapod leg to wobble:
-	Scene::Transform *hip = nullptr;
-	Scene::Transform *upper_leg = nullptr;
-	Scene::Transform *lower_leg = nullptr;
-	glm::quat hip_base_rotation;
-	glm::quat upper_leg_base_rotation;
-	glm::quat lower_leg_base_rotation;
-	float wobble = 0.0f;
+	//player data
+	Scene::Transform *player = nullptr;
+	Scene::Transform *player_head = nullptr;
+	float player_radius = 0.5f;
 
-	glm::vec3 get_leg_tip_position();
+	//suspect data
+	std::vector<Scene::Transform *> suspects;
+	std::vector<std::shared_ptr<Sound::PlayingSample>> alibis;
+	float suspect_radius = 0.5f;
+	float suspect_speak_radius = 1.0f;
+	size_t murderer_id = 2; //Blue (suspect 2) is the murderer
 
-	//music coming from the tip of the leg (as a demonstration):
-	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
+	//evidence data
+	std::vector<Scene::Transform *> evidences;
+	std::vector<std::shared_ptr<Sound::PlayingSample>> recordings;
+	float recording_play_radius = 0.5f;
+	size_t murder_recording_id = 4; //last recording is of the crime
+
+	//walls for collisions
+	std::vector<Scene::Transform *> walls;
 	
-	//camera:
+	//camera data
 	Scene::Camera *camera = nullptr;
 
 };
