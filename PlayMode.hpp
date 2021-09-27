@@ -17,7 +17,18 @@ struct PlayMode : Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
+	//helper functions
+	void attempt_arrest();
+
 	//----- game state -----
+
+	//game state tracking:
+	enum GameState : uint8_t {
+		IN_PROGRESS,
+		WIN,
+		LOSE
+	};
+	GameState gamestate = IN_PROGRESS;
 
 	//input tracking:
 	struct Button {
@@ -37,7 +48,7 @@ struct PlayMode : Mode {
 	std::vector<Scene::Transform *> suspects;
 	std::vector<std::shared_ptr<Sound::PlayingSample>> alibis;
 	float suspect_radius = 0.5f;
-	float suspect_speak_radius = 1.0f;
+	float suspect_speak_radius = 1.3f;
 	size_t murderer_id = 2; //Blue (suspect 2) is the murderer
 
 	//evidence data

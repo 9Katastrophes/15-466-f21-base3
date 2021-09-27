@@ -89,6 +89,8 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.downs += 1;
 			down.pressed = true;
 			return true;
+		} else if (evt.key.keysym.sym == SDLK_SPACE) {
+			attempt_arrest();
 		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
@@ -132,8 +134,7 @@ void PlayMode::update(float elapsed) {
 	// leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
 
 	//move player:
-	{
-
+	if (gamestate != LOSE) {
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 10.0f;
 		glm::vec2 move = glm::vec2(0.0f);
@@ -215,17 +216,45 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		if (gamestate == IN_PROGRESS) {
+			lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+		}
+		else if (gamestate == WIN) {
+			lines.draw_text("You arrested the culprit!",
+			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		}
+		else if (gamestate == LOSE) {
+			lines.draw_text("You arrested the wrong person. :(",
+			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		}
 	}
 	GL_ERRORS();
+}
+
+void PlayMode::attempt_arrest() {
+	float arrest_radius = suspect_speak_radius;
+
+	for (size_t i=0;i<suspects.size();i++){
+		float distance = glm::distance(player->position, suspects[i]->position);
+		if (distance <= arrest_radius) {
+			//player can arrest the suspect
+			if (murderer_id == i) { //suspect is the murderer!
+				gamestate = WIN;
+			}
+			else { //arrested the wrong person :(
+				gamestate = LOSE;
+			}
+
+			break;
+		}
+	}
 }
 
 // glm::vec3 PlayMode::get_leg_tip_position() {
