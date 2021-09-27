@@ -18,6 +18,7 @@ struct PlayMode : Mode {
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
 	//helper functions
+	bool collide(glm::vec3 new_position);
 	void attempt_arrest();
 
 	//----- game state -----
@@ -59,6 +60,9 @@ struct PlayMode : Mode {
 
 	//walls for collisions
 	std::vector<Scene::Transform *> walls;
+
+	//background music
+	std::shared_ptr<Sound::PlayingSample> background_music;
 	
 	//camera data
 	Scene::Camera *camera = nullptr;

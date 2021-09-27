@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <iostream>
 
 GLuint musicmurdermystery_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > musicmurdermystery_meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -61,10 +62,19 @@ PlayMode::PlayMode() : scene(*musicmurdermystery_scene) {
 		throw std::runtime_error(err_string);
 	}
 	if (walls.size() == 0) throw std::runtime_error("Walls missing.");
+	std::cout << walls.size();
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
+
+	glm::mat4x3 frame = camera->transform->make_local_to_parent();
+	glm::vec3 right = frame[0];
+	glm::vec3 at = frame[3];
+	Sound::listener.set_position_right(at, right, 1.0f / 60.0f);
+
+	//set background music
+	background_music = Sound::loop_3D(*dusty_floor_sample, 1.0f, camera->transform->position, 10.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -112,36 +122,18 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
-
-	// //slowly rotates through [0,1):
-	// wobble += elapsed / 10.0f;
-	// wobble -= std::floor(wobble);
-
-	// hip->rotation = hip_base_rotation * glm::angleAxis(
-	// 	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 1.0f, 0.0f)
-	// );
-	// upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
-	// lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
-
 	//move sound to follow leg tip position:
 	// leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
 
 	//move player:
-	if (gamestate != LOSE) {
+	if (gamestate == IN_PROGRESS) {
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 10.0f;
 		glm::vec2 move = glm::vec2(0.0f);
 		float rotation = 0.0f;
 		if (left.pressed && !right.pressed) {
 			rotation = 3.0f * 3.14f / 2.0f;
-			move.x =-1.0f;
+			move.x = -1.0f;
 		}
 		if (!left.pressed && right.pressed) {
 			rotation = 3.14f / 2.0f;
@@ -149,7 +141,7 @@ void PlayMode::update(float elapsed) {
 		}
 		if (down.pressed && !up.pressed) {
 			rotation = 0.0f;
-			move.y =-1.0f;
+			move.y = -1.0f;
 		}
 		if (!down.pressed && up.pressed) {
 			rotation = 3.14f;
@@ -166,15 +158,12 @@ void PlayMode::update(float elapsed) {
 		glm::vec3 angles(0.0f, 0.0f, rotation);
 		glm::quat new_rotation(angles);
 
-		player->position += move.y * right + move.x * up;
-		player_head->rotation = glm::normalize(new_rotation);
-	}
+		glm::vec3 new_position = player->position + move.y * right + move.x * up;
 
-	{ //update listener to camera position:
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		glm::vec3 at = frame[3];
-		Sound::listener.set_position_right(at, right, 1.0f / 60.0f);
+		if (!collide(new_position)){
+			player->position += move.y * right + move.x * up;
+		}
+		player_head->rotation = glm::normalize(new_rotation);
 	}
 
 	//reset button press counters:
@@ -189,7 +178,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
 	//set up light type and position for lit_color_texture_program:
-	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
 	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
@@ -217,7 +205,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 		constexpr float H = 0.09f;
 		if (gamestate == IN_PROGRESS) {
-			lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+			lines.draw_text("WASD moves; Listen to alibis and evidence. Make an arrest with SPACE.",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
@@ -236,6 +224,28 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		}
 	}
 	GL_ERRORS();
+}
+
+bool PlayMode::collide(glm::vec3 new_position) {
+	for (size_t i=0;i<suspects.size();i++){
+		float distance = glm::distance(new_position, suspects[i]->position);
+		if (distance <= player_radius + suspect_radius)
+			return true;
+	}
+	for (size_t i=0;i<evidences.size();i++) {
+		float distance = glm::distance(new_position, evidences[i]->position);
+		if (distance <= player_radius + recording_play_radius)
+			return true;
+	}
+	for (size_t i=0;i<walls.size();i++) {
+		glm::vec3 wall_scale = walls[i]->scale;
+		glm::vec3 wall_pos = walls[i]->position;
+
+		if (wall_pos.x - wall_scale.x <= new_position.x + player_radius && new_position.x - player_radius <= wall_pos.x + wall_scale.x
+			&& wall_pos.y - wall_scale.y <= new_position.y + player_radius && new_position.y - player_radius <= wall_pos.y + wall_scale.y)
+			return true;
+	}
+	return false;
 }
 
 void PlayMode::attempt_arrest() {
