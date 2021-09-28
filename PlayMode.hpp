@@ -20,6 +20,8 @@ struct PlayMode : Mode {
 	//helper functions
 	bool collide(glm::vec3 new_position);
 	void attempt_arrest();
+	void play_alibi(size_t i);
+	void play_recording(size_t i);
 
 	//----- game state -----
 
@@ -47,6 +49,7 @@ struct PlayMode : Mode {
 
 	//suspect data
 	std::vector<Scene::Transform *> suspects;
+	std::vector<Sound::Sample> alibi_samples;
 	std::vector<std::shared_ptr<Sound::PlayingSample>> alibis;
 	float suspect_radius = 0.5f;
 	float suspect_speak_radius = 1.3f;
@@ -54,9 +57,10 @@ struct PlayMode : Mode {
 
 	//evidence data
 	std::vector<Scene::Transform *> evidences;
+	std::vector<Sound::Sample> recording_samples;
 	std::vector<std::shared_ptr<Sound::PlayingSample>> recordings;
-	float recording_play_radius = 0.5f;
-	size_t murder_recording_id = 4; //last recording is of the crime
+	float evidence_radius = 0.5f;
+	float recording_play_radius = 1.3f;
 
 	//walls for collisions
 	std::vector<Scene::Transform *> walls;

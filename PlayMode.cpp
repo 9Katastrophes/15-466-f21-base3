@@ -74,7 +74,24 @@ PlayMode::PlayMode() : scene(*musicmurdermystery_scene) {
 	Sound::listener.set_position_right(at, right, 1.0f / 60.0f);
 
 	//set background music
-	background_music = Sound::loop_3D(*dusty_floor_sample, 1.0f, camera->transform->position, 10.0f);
+	background_music = Sound::loop(*dusty_floor_sample, 0.3f, 1.0f);
+
+	for (size_t i=0;i<suspects.size();i++)
+		alibis.push_back(nullptr);
+	for (size_t i=0;i<evidences.size();i++)
+		recordings.push_back(nullptr);
+
+	//abilis and evidences
+	alibi_samples.push_back(Sound::Sample(data_path("red-alibi.opus")));
+	alibi_samples.push_back(Sound::Sample(data_path("green-alibi.opus")));
+	alibi_samples.push_back(Sound::Sample(data_path("blue-alibi.opus")));
+	alibi_samples.push_back(Sound::Sample(data_path("yellow-alibi.opus")));
+
+	recording_samples.push_back(Sound::Sample(data_path("evidence0.opus")));
+	recording_samples.push_back(Sound::Sample(data_path("evidence1.opus")));
+	recording_samples.push_back(Sound::Sample(data_path("evidence2.opus")));
+	recording_samples.push_back(Sound::Sample(data_path("evidence3.opus")));
+	recording_samples.push_back(Sound::Sample(data_path("evidence4.opus")));
 }
 
 PlayMode::~PlayMode() {
@@ -122,11 +139,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
-	//move sound to follow leg tip position:
-	// leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
 
-	//move player:
 	if (gamestate == IN_PROGRESS) {
+		//move player:
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 10.0f;
 		glm::vec2 move = glm::vec2(0.0f);
@@ -164,6 +179,15 @@ void PlayMode::update(float elapsed) {
 			player->position += move.y * right + move.x * up;
 		}
 		player_head->rotation = glm::normalize(new_rotation);
+
+		for (size_t i=0;i<alibis.size();i++) {
+			if (alibis[i] != nullptr && alibis[i]->stopped)
+				alibis[i] = nullptr;
+		}
+		for (size_t i=0;i<recordings.size();i++) {
+			if (recordings[i] != nullptr && recordings[i]->stopped)
+				recordings[i] = nullptr;
+		}
 	}
 
 	//reset button press counters:
@@ -205,7 +229,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 		constexpr float H = 0.09f;
 		if (gamestate == IN_PROGRESS) {
-			lines.draw_text("WASD moves; Listen to alibis and evidence. Make an arrest with SPACE.",
+			lines.draw_text("WASD moves. Listen to alibis and evidence. Make an arrest with SPACE.",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
@@ -229,12 +253,16 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 bool PlayMode::collide(glm::vec3 new_position) {
 	for (size_t i=0;i<suspects.size();i++){
 		float distance = glm::distance(new_position, suspects[i]->position);
+		if (distance <= suspect_speak_radius)
+			play_alibi(i);
 		if (distance <= player_radius + suspect_radius)
 			return true;
 	}
 	for (size_t i=0;i<evidences.size();i++) {
 		float distance = glm::distance(new_position, evidences[i]->position);
-		if (distance <= player_radius + recording_play_radius)
+		if (distance <= recording_play_radius)
+			play_recording(i);
+		if (distance <= player_radius + evidence_radius)
 			return true;
 	}
 	for (size_t i=0;i<walls.size();i++) {
@@ -267,7 +295,20 @@ void PlayMode::attempt_arrest() {
 	}
 }
 
-// glm::vec3 PlayMode::get_leg_tip_position() {
-// 	//the vertex position here was read from the model in blender:
-// 	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
-// }
+void PlayMode::play_alibi(size_t i) {
+	if (i >= alibis.size())
+		return;
+
+	if (alibis[i] == nullptr) {
+		alibis[i] = Sound::play(alibi_samples[i]);
+	}
+}
+
+void PlayMode::play_recording(size_t i) {
+	if (i >= recordings.size())
+		return;
+
+	if (recordings[i] == nullptr) {
+		recordings[i] = Sound::play(recording_samples[i]);
+	}
+}
