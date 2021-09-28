@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Who Killed Mr.Alpha
 
-Author: (TODO: your name)
+Author: Katherine Wang
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: What's interesting about my game is you need to listen carefully to audio recordings to determine who murdered Mr.Alpha.
 
 Screen Shot:
 
@@ -10,9 +10,11 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+Use WASD to move your investigator around. Talk to the suspects and listen to their alibis. Listen carefully to the audio recording evidence. Determine who the real murderer is and arrest them with SPACE.
 
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Sources: 
+"Dusty Floor" is (c) 2017 Jim McCann: https://shout.horse/ix/tracks/dusty-floor/
+Thanks to my friends Ricky, Natalie, Andy, and Sanjay for their voices.
 
 This game was built with [NEST](NEST.md).
 
